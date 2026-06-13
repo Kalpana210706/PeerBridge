@@ -10,6 +10,8 @@ function JoinRoom() {
     useState("");
   const [userCount, setUserCount] =
     useState(1);
+    const [receiveProgress, setReceiveProgress] =
+  useState(0);
 
   const roomRef = useRef("");
 
@@ -36,17 +38,29 @@ function JoinRoom() {
           );
 
           if (data.type === "file") {
-            setDownloadUrl(
-              data.content
-            );
+  let progress = 0;
 
-            setFileName(data.name);
+  const interval = setInterval(() => {
+    progress += 10;
 
-            console.log(
-              "File Received:",
-              data.name
-            );
-          }
+    setReceiveProgress(progress);
+
+    if (progress >= 100) {
+      clearInterval(interval);
+
+      setDownloadUrl(
+        data.content
+      );
+
+      setFileName(data.name);
+
+      console.log(
+        "File Received:",
+        data.name
+      );
+    }
+  }, 100);
+}
         };
       };
 
@@ -140,10 +154,23 @@ function JoinRoom() {
       <button onClick={joinRoom}>
         Join Room
       </button>
+{receiveProgress > 0 && (
+  <>
+    <p>
+      Receiving:
+      {" "}
+      {receiveProgress}%
+    </p>
 
+    <progress
+      value={receiveProgress}
+      max="100"
+    />
+  </>
+)}
       <p>
         👥 Users in Room:{" "}
-        {userCount}/2
+        {userCount}
       </p>
 
       {downloadUrl && (

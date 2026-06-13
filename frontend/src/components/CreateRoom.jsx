@@ -15,7 +15,8 @@ function CreateRoom() {
 const [selectedFile, setSelectedFile] =
   useState(null);
   const roomRef = useRef("");
-
+const [sendProgress, setSendProgress] =
+  useState(0);
   const createRoom = () => {
     const id = Math.random()
       .toString(36)
@@ -122,6 +123,7 @@ const [selectedFile, setSelectedFile] =
   }, []);
 
   const sendFile = () => {
+    setSendProgress(0);
   if (!selectedFile) {
     alert("Please select a file");
     return;
@@ -150,6 +152,16 @@ const [selectedFile, setSelectedFile] =
   const reader = new FileReader();
 
   reader.onload = () => {
+   let progress = 0;
+
+const interval = setInterval(() => {
+  progress += 10;
+
+  setSendProgress(progress);
+
+  if (progress >= 100) {
+    clearInterval(interval);
+
     dataChannel.send(
       JSON.stringify({
         type: "file",
@@ -162,55 +174,18 @@ const [selectedFile, setSelectedFile] =
       "File Sent:",
       selectedFile.name
     );
+  }
+}, 100);
+
+    console.log(
+      "File Sent:",
+      selectedFile.name
+    );
   };
 
   reader.readAsDataURL(selectedFile);
 };
-  // const sendFile = (e) => {
-  //   const file = e.target.files[0];
-
-  //   if (!file) return;
-
-  //   if (
-  //     file.size >
-  //     100 * 1024 * 1024
-  //   ) {
-  //     alert(
-  //       "Maximum file size is 100 MB"
-  //     );
-  //     return;
-  //   }
-
-  //   if (
-  //     !dataChannel ||
-  //     dataChannel.readyState !== "open"
-  //   ) {
-  //     alert(
-  //       "Data Channel not ready"
-  //     );
-  //     return;
-  //   }
-
-  //   const reader = new FileReader();
-
-  //   reader.onload = () => {
-  //     dataChannel.send(
-  //       JSON.stringify({
-  //         type: "file",
-  //         name: file.name,
-  //         content: reader.result,
-  //       })
-  //     );
-
-  //     console.log(
-  //       "File Sent:",
-  //       file.name
-  //     );
-  //   };
-
-  //   reader.readAsDataURL(file);
-  // };
-
+  
   return (
     <div>
       <button onClick={createRoom}>
@@ -258,7 +233,22 @@ const [selectedFile, setSelectedFile] =
       </button>
     </>
   )}
+
+  {sendProgress > 0 && (
+  <>
+    <p>
+      Sending: {sendProgress}%
+    </p>
+
+    <progress
+      value={sendProgress}
+      max="100"
+    />
+  </>
+)}
 </>
+
+
           )}
         </>
       )}
