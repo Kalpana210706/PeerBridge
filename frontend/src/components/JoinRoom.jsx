@@ -4,6 +4,10 @@ import { peerConnection } from "../webrtc";
 
 function JoinRoom() {
   const [roomId, setRoomId] = useState("");
+  const [downloadUrl, setDownloadUrl] =
+    useState("");
+  const [fileName, setFileName] =
+    useState("");
 
   const joinRoom = () => {
     socket.emit("join-room", roomId);
@@ -22,10 +26,19 @@ function JoinRoom() {
       };
 
       channel.onmessage = (msg) => {
-        console.log(
-          "Received:",
+        const data = JSON.parse(
           msg.data
         );
+
+        if (data.type === "file") {
+          setDownloadUrl(data.content);
+          setFileName(data.name);
+
+          console.log(
+            "File Received:",
+            data.name
+          );
+        }
       };
     };
 
@@ -92,6 +105,21 @@ function JoinRoom() {
       <button onClick={joinRoom}>
         Join Room
       </button>
+
+      {downloadUrl && (
+        <div>
+          <h3>
+            File Received ✅
+          </h3>
+
+          <a
+            href={downloadUrl}
+            download={fileName}
+          >
+            Download {fileName}
+          </a>
+        </div>
+      )}
     </div>
   );
 }
