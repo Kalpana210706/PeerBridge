@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import socket from "../socket";
 import {
   peerConnection,
-  dataChannel,
+  createDataChannel,
 } from "../webrtc";
 
 function CreateRoom() {
@@ -20,13 +20,11 @@ function CreateRoom() {
     socket.emit("join-room", id);
   };
 
-  const sendMessage = () => {
-    dataChannel.send("Hello Peer 🚀");
-  };
-
   useEffect(() => {
     socket.on("user-joined", async () => {
       setPeerConnected(true);
+
+      createDataChannel();
 
       const offer =
         await peerConnection.createOffer();
@@ -49,9 +47,34 @@ function CreateRoom() {
       console.log("WebRTC Connected");
     });
 
+    socket.on(
+      "ice-candidate",
+      async (candidate) => {
+        try {
+          await peerConnection.addIceCandidate(
+            candidate
+          );
+        } catch (err) {
+          console.log(err);
+        }
+      }
+    );
+
+    peerConnection.onicecandidate = (
+      event
+    ) => {
+      if (event.candidate) {
+        socket.emit("ice-candidate", {
+          roomId,
+          candidate: event.candidate,
+        });
+      }
+    };
+
     return () => {
       socket.off("user-joined");
       socket.off("answer");
+      socket.off("ice-candidate");
     };
   }, [roomId]);
 
@@ -66,15 +89,7 @@ function CreateRoom() {
           <h2>Room ID: {roomId}</h2>
 
           {peerConnected ? (
-            <>
-              <p>Peer Connected ✅</p>
-
-              <button
-                onClick={sendMessage}
-              >
-                Send Hello
-              </button>
-            </>
+            <p>Peer Connected ✅</p>
           ) : (
             <p>Waiting for Peer...</p>
           )}

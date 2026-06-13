@@ -6,14 +6,21 @@ export const peerConnection = new RTCPeerConnection({
   ],
 });
 
+export let dataChannel = null;
 
-export const dataChannel =
-  peerConnection.createDataChannel("chat");
+export const createDataChannel = () => {
+  dataChannel =
+    peerConnection.createDataChannel(
+      "fileTransfer"
+    );
 
-dataChannel.onopen = () => {
-  console.log("Data Channel Opened");
-};
+  dataChannel.onopen = () => {
+    console.log("Data Channel Opened");
+  };
 
-dataChannel.onmessage = (event) => {
-  console.log("Received:", event.data);
+  dataChannel.onclose = () => {
+    console.log("Data Channel Closed");
+  };
+
+  return dataChannel;
 };
