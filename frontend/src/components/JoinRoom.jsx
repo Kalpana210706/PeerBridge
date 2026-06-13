@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import socket from "../socket";
 import { peerConnection } from "../webrtc";
 
@@ -8,41 +8,51 @@ function JoinRoom() {
     useState("");
   const [fileName, setFileName] =
     useState("");
+  const [userCount, setUserCount] =
+    useState(1);
+
+  const roomRef = useRef("");
 
   const joinRoom = () => {
+    roomRef.current = roomId;
+
     socket.emit("join-room", roomId);
   };
 
   useEffect(() => {
-    peerConnection.ondatachannel = (
-      event
-    ) => {
-      const channel = event.channel;
+    peerConnection.ondatachannel =
+      (event) => {
+        const channel = event.channel;
 
-      channel.onopen = () => {
-        console.log(
-          "Data Channel Opened"
-        );
-      };
-
-      channel.onmessage = (msg) => {
-        const data = JSON.parse(
-          msg.data
-        );
-
-        if (data.type === "file") {
-          setDownloadUrl(data.content);
-          setFileName(data.name);
-
+        channel.onopen = () => {
           console.log(
-            "File Received:",
-            data.name
+            "Data Channel Opened"
           );
-        }
-      };
-    };
+        };
 
-    socket.on("offer", async (offer) => {
+        channel.onmessage = (msg) => {
+          const data = JSON.parse(
+            msg.data
+          );
+
+          if (data.type === "file") {
+            setDownloadUrl(
+              data.content
+            );
+
+            setFileName(data.name);
+
+            console.log(
+              "File Received:",
+              data.name
+            );
+          }
+        };
+      };
+
+    const handleOffer = async (
+      offer
+    ) => {
       await peerConnection.setRemoteDescription(
         offer
       );
@@ -55,13 +65,12 @@ function JoinRoom() {
       );
 
       socket.emit("answer", {
-        roomId,
+        roomId: roomRef.current,
         answer,
       });
-    });
+    };
 
-    socket.on(
-      "ice-candidate",
+    const handleIceCandidate =
       async (candidate) => {
         try {
           await peerConnection.addIceCandidate(
@@ -70,25 +79,51 @@ function JoinRoom() {
         } catch (err) {
           console.log(err);
         }
+      };
+
+    socket.on("offer", handleOffer);
+
+    socket.on(
+      "ice-candidate",
+      handleIceCandidate
+    );
+
+    socket.on(
+      "room-user-count",
+      (count) => {
+        setUserCount(count);
       }
     );
 
-    peerConnection.onicecandidate = (
-      event
-    ) => {
-      if (event.candidate) {
-        socket.emit("ice-candidate", {
-          roomId,
-          candidate: event.candidate,
-        });
-      }
-    };
+    peerConnection.onicecandidate =
+      (event) => {
+        if (event.candidate) {
+          socket.emit(
+            "ice-candidate",
+            {
+              roomId:
+                roomRef.current,
+              candidate:
+                event.candidate,
+            }
+          );
+        }
+      };
 
     return () => {
-      socket.off("offer");
-      socket.off("ice-candidate");
+      socket.off(
+        "offer",
+        handleOffer
+      );
+      socket.off(
+        "ice-candidate",
+        handleIceCandidate
+      );
+      socket.off(
+        "room-user-count"
+      );
     };
-  }, [roomId]);
+  }, []);
 
   return (
     <div>
@@ -105,6 +140,11 @@ function JoinRoom() {
       <button onClick={joinRoom}>
         Join Room
       </button>
+
+      <p>
+        👥 Users in Room:{" "}
+        {userCount}/2
+      </p>
 
       {downloadUrl && (
         <div>

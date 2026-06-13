@@ -4,7 +4,6 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 
 const app = express();
-
 app.use(cors());
 
 const server = http.createServer(app);
@@ -22,7 +21,18 @@ io.on("connection", (socket) => {
   socket.on("join-room", (roomId) => {
     socket.join(roomId);
 
+    const room =
+      io.sockets.adapter.rooms.get(roomId);
+
+    const userCount = room ? room.size : 0;
+
     console.log(`${socket.id} joined room ${roomId}`);
+    console.log(`Users in room: ${userCount}`);
+
+    io.to(roomId).emit(
+      "room-user-count",
+      userCount
+    );
 
     socket.to(roomId).emit("user-joined");
   });
@@ -35,15 +45,31 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("answer", answer);
   });
 
-  socket.on("ice-candidate", ({ roomId, candidate }) => {
-    socket.to(roomId).emit("ice-candidate", candidate);
-  });
+  socket.on(
+    "ice-candidate",
+    ({ roomId, candidate }) => {
+      socket
+        .to(roomId)
+        .emit(
+          "ice-candidate",
+          candidate
+        );
+    }
+  );
 
   socket.on("disconnect", () => {
-    console.log(`Disconnected: ${socket.id}`);
+    console.log(
+      `Disconnected: ${socket.id}`
+    );
+
+    socket.broadcast.emit(
+      "peer-disconnected"
+    );
   });
 });
 
 server.listen(5000, () => {
-  console.log("Server running on port 5000");
+  console.log(
+    "Server running on port 5000"
+  );
 });
