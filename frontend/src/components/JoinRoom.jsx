@@ -130,6 +130,17 @@ if (
       );
 
       setFileName(data.name);
+      const a =
+  document.createElement("a");
+
+a.href = data.content;
+a.download = data.name;
+
+document.body.appendChild(a);
+
+a.click();
+
+document.body.removeChild(a);
 
       console.log(
         "File Received:",
