@@ -6,7 +6,6 @@ const cors = require("cors");
 const app = express();
 
 app.use(cors());
-app.use(express.json());
 
 const server = http.createServer(app);
 
@@ -17,10 +16,6 @@ const io = new Server(server, {
   },
 });
 
-app.get("/", (req, res) => {
-  res.send("PeerBridge Backend Running");
-});
-
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
@@ -29,18 +24,26 @@ io.on("connection", (socket) => {
 
     console.log(`${socket.id} joined room ${roomId}`);
 
-    socket.to(roomId).emit("user-joined", {
-      socketId: socket.id,
-    });
+    socket.to(roomId).emit("user-joined");
+  });
+
+  socket.on("offer", ({ roomId, offer }) => {
+    socket.to(roomId).emit("offer", offer);
+  });
+
+  socket.on("answer", ({ roomId, answer }) => {
+    socket.to(roomId).emit("answer", answer);
+  });
+
+  socket.on("ice-candidate", ({ roomId, candidate }) => {
+    socket.to(roomId).emit("ice-candidate", candidate);
   });
 
   socket.on("disconnect", () => {
-    console.log(`User Disconnected: ${socket.id}`);
+    console.log(`Disconnected: ${socket.id}`);
   });
 });
 
-const PORT = 5000;
-
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.listen(5000, () => {
+  console.log("Server running on port 5000");
 });
