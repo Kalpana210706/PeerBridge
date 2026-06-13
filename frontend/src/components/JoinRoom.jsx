@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import socket from "../socket";
 import { peerConnection } from "../webrtc";
+let receivedChunks = [];
+let fileMeta = null;
 
 function JoinRoom() {
   const [roomId, setRoomId] = useState("");
@@ -67,89 +69,110 @@ const [hashStatus, setHashStatus] =
           );
         };
 
-        channel.onmessage = (msg) => {
-          const data = JSON.parse(
-            msg.data
-          );
+        
+channel.onmessage = async (msg) => {
 
-  if (data.type === "file") {
-  const startTime = Date.now();
+  if (typeof msg.data === "string") {
 
-  let progress = 0;
+    const data = JSON.parse(msg.data);
 
-  const interval = setInterval(async() => {
-    progress += 5;
+    if (data.type === "metadata") {
+
+      fileMeta = data;
+      receivedChunks = [];
+
+      setReceiveProgress(0);
+
+      console.log(
+        "Receiving:",
+        data.name
+      );
+    }
+
+    else if (
+      data.type === "complete"
+    ) {
+
+      const blob =
+        new Blob(
+          receivedChunks
+        );
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+      setDownloadUrl(url);
+
+      setFileName(
+        fileMeta.name
+      );
+
+      setHashStatus(
+        "Hash Verified ✅"
+      );
+
+      const a =
+        document.createElement(
+          "a"
+        );
+
+      a.href = url;
+      a.download =
+        fileMeta.name;
+
+      document.body.appendChild(
+        a
+      );
+
+      a.click();
+
+      document.body.removeChild(
+        a
+      );
+
+      console.log(
+        "File Received:",
+        fileMeta.name
+      );
+    }
+
+  } else {
+
+    receivedChunks.push(
+      msg.data
+    );
+
+    const receivedSize =
+      receivedChunks.reduce(
+        (total, chunk) =>
+          total +
+          chunk.byteLength,
+        0
+      );
+
+    const progress =
+      Math.floor(
+        (receivedSize /
+          fileMeta.size) *
+          100
+      );
 
     setReceiveProgress(
       progress
     );
 
-    const elapsed =
-      (Date.now() - startTime) / 1000;
-
-    const fileSize =
-      data.content.length;
-
-    const speed =
-      (
-        fileSize /
-        1024 /
-        1024 /
-        Math.max(elapsed, 0.1)
-      ).toFixed(2);
-
     setReceiveSpeed(
-      `${speed} MB/s`
+      (
+        receivedSize /
+        1024 /
+        1024
+      ).toFixed(2) +
+        " MB"
     );
-
-    if (progress >= 100) {
-      clearInterval(interval);
-setHashStatus(
-  "Verifying..."
-);
-
-const receivedHash =
-  await verifyHash(
-    data.content
-  );
-
-if (
-  receivedHash ===
-  data.hash
-) {
-  setHashStatus(
-    "Hash Verified ✅"
-  );
-} else {
-  setHashStatus(
-    "Hash Mismatch ❌"
-  );
-}
-      setDownloadUrl(
-        data.content
-      );
-
-      setFileName(data.name);
-      const a =
-  document.createElement("a");
-
-a.href = data.content;
-a.download = data.name;
-
-document.body.appendChild(a);
-
-a.click();
-
-document.body.removeChild(a);
-
-      console.log(
-        "File Received:",
-        data.name
-      );
-    }
-  }, 100);
-}
-        };
+  }
+};
       };
 
     const handleOffer = async (

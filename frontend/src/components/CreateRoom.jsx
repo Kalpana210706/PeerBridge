@@ -21,6 +21,7 @@ const [sendProgress, setSendProgress] =
   useState("");
   const [dragActive, setDragActive] =
   useState(false);
+  
 
  
 const [sendSpeed, setSendSpeed] =
@@ -179,8 +180,7 @@ const handleDragLeave = () => {
 };
 
 
-  const sendFile = async () => {
-    setSendProgress(0);
+const sendFile = async () => {
   if (!selectedFile) {
     alert("Please select a file");
     return;
@@ -205,66 +205,103 @@ const handleDragLeave = () => {
     );
     return;
   }
-setHashStatus(
-  "Calculating..."
-);
 
-const fileHash =
-  await generateHash(
-    selectedFile
+  setSendProgress(0);
+  setHashStatus("Calculating...");
+
+  const fileHash =
+    await generateHash(
+      selectedFile
+    );
+
+  setHashStatus(
+    "Hash Generated ✅"
   );
 
-setHashStatus(
-  "Hash Generated ✅"
-);
-  const reader = new FileReader();
+  const arrayBuffer =
+    await selectedFile.arrayBuffer();
 
-  reader.onload = () => {
-  const startTime = Date.now();
+  const CHUNK_SIZE =
+    16 * 1024; // 16 KB
 
-  let progress = 0;
+  const startTime =
+    Date.now();
 
-  const interval = setInterval(() => {
-    progress += 5;
+  dataChannel.send(
+    JSON.stringify({
+      type: "metadata",
+      name: selectedFile.name,
+      size: selectedFile.size,
+      hash: fileHash,
+    })
+  );
 
-    setSendProgress(progress);
+  let offset = 0;
+
+  while (
+    offset <
+    arrayBuffer.byteLength
+  ) {
+    const chunk =
+      arrayBuffer.slice(
+        offset,
+        offset + CHUNK_SIZE
+      );
+
+    dataChannel.send(chunk);
+
+    offset += CHUNK_SIZE;
+
+    const progress =
+      Math.floor(
+        (offset /
+          arrayBuffer.byteLength) *
+          100
+      );
+
+    setSendProgress(
+      progress
+    );
 
     const elapsed =
-      (Date.now() - startTime) / 1000;
+      (Date.now() -
+        startTime) /
+      1000;
 
     const speed =
       (
-        selectedFile.size /
+        offset /
         1024 /
         1024 /
-        Math.max(elapsed, 0.1)
+        Math.max(
+          elapsed,
+          0.1
+        )
       ).toFixed(2);
 
     setSendSpeed(
       `${speed} MB/s`
     );
 
-    if (progress >= 100) {
-      clearInterval(interval);
+    await new Promise(
+      (resolve) =>
+        setTimeout(
+          resolve,
+          1
+        )
+    );
+  }
 
-      dataChannel.send(
-        JSON.stringify({
-         type: "file",
-name: selectedFile.name,
-content: reader.result,
-hash: fileHash,
-        })
-      );
+  dataChannel.send(
+    JSON.stringify({
+      type: "complete",
+    })
+  );
 
-      console.log(
-        "File Sent:",
-        selectedFile.name
-      );
-    }
-  }, 100);
-};
-
-  reader.readAsDataURL(selectedFile);
+  console.log(
+    "File Sent:",
+    selectedFile.name
+  );
 };
   
   return (
