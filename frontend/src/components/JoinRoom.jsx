@@ -13,6 +13,9 @@ function JoinRoom() {
     const [receiveProgress, setReceiveProgress] =
   useState(0);
 
+const [receiveSpeed, setReceiveSpeed] =
+  useState("0 MB/s");
+
   const roomRef = useRef("");
 
   const joinRoom = () => {
@@ -37,13 +40,35 @@ function JoinRoom() {
             msg.data
           );
 
-          if (data.type === "file") {
+  if (data.type === "file") {
+  const startTime = Date.now();
+
   let progress = 0;
 
   const interval = setInterval(() => {
-    progress += 10;
+    progress += 5;
 
-    setReceiveProgress(progress);
+    setReceiveProgress(
+      progress
+    );
+
+    const elapsed =
+      (Date.now() - startTime) / 1000;
+
+    const fileSize =
+      data.content.length;
+
+    const speed =
+      (
+        fileSize /
+        1024 /
+        1024 /
+        Math.max(elapsed, 0.1)
+      ).toFixed(2);
+
+    setReceiveSpeed(
+      `${speed} MB/s`
+    );
 
     if (progress >= 100) {
       clearInterval(interval);
@@ -157,7 +182,7 @@ function JoinRoom() {
 {receiveProgress > 0 && (
   <>
     <p>
-      Receiving:
+      Receive Progress:
       {" "}
       {receiveProgress}%
     </p>
@@ -166,6 +191,12 @@ function JoinRoom() {
       value={receiveProgress}
       max="100"
     />
+
+    <p>
+      Receive Speed:
+      {" "}
+      {receiveSpeed}
+    </p>
   </>
 )}
       <p>

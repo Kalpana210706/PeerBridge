@@ -17,6 +17,10 @@ const [selectedFile, setSelectedFile] =
   const roomRef = useRef("");
 const [sendProgress, setSendProgress] =
   useState(0);
+
+ 
+const [sendSpeed, setSendSpeed] =
+  useState("0 MB/s");
   const createRoom = () => {
     const id = Math.random()
       .toString(36)
@@ -152,36 +156,48 @@ const [sendProgress, setSendProgress] =
   const reader = new FileReader();
 
   reader.onload = () => {
-   let progress = 0;
+  const startTime = Date.now();
 
-const interval = setInterval(() => {
-  progress += 10;
+  let progress = 0;
 
-  setSendProgress(progress);
+  const interval = setInterval(() => {
+    progress += 5;
 
-  if (progress >= 100) {
-    clearInterval(interval);
+    setSendProgress(progress);
 
-    dataChannel.send(
-      JSON.stringify({
-        type: "file",
-        name: selectedFile.name,
-        content: reader.result,
-      })
+    const elapsed =
+      (Date.now() - startTime) / 1000;
+
+    const speed =
+      (
+        selectedFile.size /
+        1024 /
+        1024 /
+        Math.max(elapsed, 0.1)
+      ).toFixed(2);
+
+    setSendSpeed(
+      `${speed} MB/s`
     );
 
-    console.log(
-      "File Sent:",
-      selectedFile.name
-    );
-  }
-}, 100);
+    if (progress >= 100) {
+      clearInterval(interval);
 
-    console.log(
-      "File Sent:",
-      selectedFile.name
-    );
-  };
+      dataChannel.send(
+        JSON.stringify({
+          type: "file",
+          name: selectedFile.name,
+          content: reader.result,
+        })
+      );
+
+      console.log(
+        "File Sent:",
+        selectedFile.name
+      );
+    }
+  }, 100);
+};
 
   reader.readAsDataURL(selectedFile);
 };
@@ -234,16 +250,24 @@ const interval = setInterval(() => {
     </>
   )}
 
-  {sendProgress > 0 && (
+ {sendProgress > 0 && (
   <>
     <p>
-      Sending: {sendProgress}%
+      Send Progress:
+      {" "}
+      {sendProgress}%
     </p>
 
     <progress
       value={sendProgress}
       max="100"
     />
+
+    <p>
+      Send Speed:
+      {" "}
+      {sendSpeed}
+    </p>
   </>
 )}
 </>
