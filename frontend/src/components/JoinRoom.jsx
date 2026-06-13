@@ -15,7 +15,8 @@ function JoinRoom() {
 
 const [receiveSpeed, setReceiveSpeed] =
   useState("0 MB/s");
-
+const [hashStatus, setHashStatus] =
+  useState("");
   const roomRef = useRef("");
 
   const joinRoom = () => {
@@ -23,6 +24,37 @@ const [receiveSpeed, setReceiveSpeed] =
 
     socket.emit("join-room", roomId);
   };
+
+
+  const verifyHash = async (
+  dataUrl
+) => {
+  const response =
+    await fetch(dataUrl);
+
+  const buffer =
+    await response.arrayBuffer();
+
+  const hashBuffer =
+    await crypto.subtle.digest(
+      "SHA-256",
+      buffer
+    );
+
+  const hashArray =
+    Array.from(
+      new Uint8Array(hashBuffer)
+    );
+
+  return hashArray
+    .map((b) =>
+      b.toString(16)
+        .padStart(2, "0")
+    )
+    .join("");
+};
+
+
 
   useEffect(() => {
     peerConnection.ondatachannel =
@@ -45,7 +77,7 @@ const [receiveSpeed, setReceiveSpeed] =
 
   let progress = 0;
 
-  const interval = setInterval(() => {
+  const interval = setInterval(async() => {
     progress += 5;
 
     setReceiveProgress(
@@ -72,7 +104,27 @@ const [receiveSpeed, setReceiveSpeed] =
 
     if (progress >= 100) {
       clearInterval(interval);
+setHashStatus(
+  "Verifying..."
+);
 
+const receivedHash =
+  await verifyHash(
+    data.content
+  );
+
+if (
+  receivedHash ===
+  data.hash
+) {
+  setHashStatus(
+    "Hash Verified ✅"
+  );
+} else {
+  setHashStatus(
+    "Hash Mismatch ❌"
+  );
+}
       setDownloadUrl(
         data.content
       );
@@ -197,6 +249,12 @@ const [receiveSpeed, setReceiveSpeed] =
       {" "}
       {receiveSpeed}
     </p>
+<p>
+  Hash Status:
+  {" "}
+  {hashStatus}
+</p>
+
   </>
 )}
       <p>

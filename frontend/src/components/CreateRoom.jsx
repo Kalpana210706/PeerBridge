@@ -17,6 +17,10 @@ const [selectedFile, setSelectedFile] =
   const roomRef = useRef("");
 const [sendProgress, setSendProgress] =
   useState(0);
+  const [hashStatus, setHashStatus] =
+  useState("");
+  const [dragActive, setDragActive] =
+  useState(false);
 
  
 const [sendSpeed, setSendSpeed] =
@@ -125,8 +129,57 @@ const [sendSpeed, setSendSpeed] =
       );
     };
   }, []);
+const generateHash = async (
+  file
+) => {
+  const buffer =
+    await file.arrayBuffer();
 
-  const sendFile = () => {
+  const hashBuffer =
+    await crypto.subtle.digest(
+      "SHA-256",
+      buffer
+    );
+
+  const hashArray =
+    Array.from(
+      new Uint8Array(hashBuffer)
+    );
+
+  return hashArray
+    .map((b) =>
+      b.toString(16)
+        .padStart(2, "0")
+    )
+    .join("");
+};
+
+const handleDrop = (e) => {
+  e.preventDefault();
+
+  setDragActive(false);
+
+  const file = e.dataTransfer.files[0];
+
+  if (file) {
+    setSelectedFile(file);
+  }
+};
+
+const handleDragOver = (e) => {
+  e.preventDefault();
+};
+
+const handleDragEnter = () => {
+  setDragActive(true);
+};
+
+const handleDragLeave = () => {
+  setDragActive(false);
+};
+
+
+  const sendFile = async () => {
     setSendProgress(0);
   if (!selectedFile) {
     alert("Please select a file");
@@ -152,7 +205,18 @@ const [sendSpeed, setSendSpeed] =
     );
     return;
   }
+setHashStatus(
+  "Calculating..."
+);
 
+const fileHash =
+  await generateHash(
+    selectedFile
+  );
+
+setHashStatus(
+  "Hash Generated ✅"
+);
   const reader = new FileReader();
 
   reader.onload = () => {
@@ -185,9 +249,10 @@ const [sendSpeed, setSendSpeed] =
 
       dataChannel.send(
         JSON.stringify({
-          type: "file",
-          name: selectedFile.name,
-          content: reader.result,
+         type: "file",
+name: selectedFile.name,
+content: reader.result,
+hash: fileHash,
         })
       );
 
@@ -225,6 +290,25 @@ const [sendSpeed, setSendSpeed] =
           {peerStatus ===
             "Connected ✅" && (
             <>
+  <div
+  onDrop={handleDrop}
+  onDragOver={handleDragOver}
+  onDragEnter={handleDragEnter}
+  onDragLeave={handleDragLeave}
+  style={{
+    border: dragActive
+      ? "3px solid #4caf50"
+      : "2px dashed gray",
+    padding: "30px",
+    margin: "20px 0",
+    borderRadius: "10px",
+    textAlign: "center",
+  }}
+>
+  <p>
+    Drag & Drop File Here
+  </p>
+
   <input
     type="file"
     onChange={(e) =>
@@ -233,6 +317,8 @@ const [sendSpeed, setSendSpeed] =
       )
     }
   />
+</div>
+  
 
   {selectedFile && (
     <>
@@ -268,6 +354,12 @@ const [sendSpeed, setSendSpeed] =
       {" "}
       {sendSpeed}
     </p>
+
+    <p>
+  Hash Status:
+  {" "}
+  {hashStatus}
+</p>
   </>
 )}
 </>
