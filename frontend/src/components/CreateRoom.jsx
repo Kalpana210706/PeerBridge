@@ -276,6 +276,21 @@ hash: fileHash,
       {roomId && (
         <>
           <h2>Room ID: {roomId}</h2>
+          <p>
+  Share Link:
+  {" "}
+  {`${window.location.origin}?room=${roomId}`}
+</p>
+
+<button
+  onClick={() =>
+    navigator.clipboard.writeText(
+      `${window.location.origin}?room=${roomId}`
+    )
+  }
+>
+  Copy Link
+</button>
 
           <p>
             👥 Users in Room:{" "}
