@@ -77,7 +77,7 @@ All file transfers occur directly between peers.
 ### Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/PeerBridge.git
+git clone https://github.com/Kalpana210706/PeerBridge.git
 cd PeerBridge
 ```
 
